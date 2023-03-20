@@ -1,5 +1,5 @@
 CC=/usr/bin/g++
-CFLAGS=-O3 -Wall -pedantic -fopenmp
+CPPFLAGS=-O3 -Wall -pedantic -fopenmp -std=c++17
 SOURCES=$(wildcard *.cpp)
 OBJECTS=$(SOURCES:.cpp=.o)
 EXEC=parsort
@@ -9,10 +9,10 @@ EXEC=parsort
 all: $(EXEC)
 
 $(EXEC): $(OBJECTS)
-	$(CC) $(CFLAGS) $^ -o $@
+	$(CC) $(CPPFLAGS) $^ -o $@
 
-%.o: %.c
-	$(CC) -c $(CFLAGS) $^ -o $@
+%.o: %.cpp
+	$(CC) -c $(CPPFLAGS) $^ -o $@
 
 clean:
 	rm -f $(EXEC) $(OBJECTS)
