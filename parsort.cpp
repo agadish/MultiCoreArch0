@@ -232,6 +232,8 @@ Parsort::read_input_file(const char *inputFilePath)
     bool has_input = true;
     while (has_input) {
         datapage_t curr_datapage;
+		// Assuming the allocator alloactes a complete memory page
+        curr_datapage.reserve(mVarsPerPage);
         for (size_t i = 0 ; i < mVarsPerPage ; ++i) {
             has_input = static_cast<bool>(inputFile >> number);
             if (!has_input) {

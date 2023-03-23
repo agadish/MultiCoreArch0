@@ -10,8 +10,32 @@
 #include <vector>
 #include <memory>
 #include <unistd.h>
+// #include <sys/mman.h>
 
 using namespace std;
+
+
+// class DatapageAllocator : public std::allocator<uint64_t> {
+// public:
+//     uint64_t* allocate(std::size_t n) {
+//         std::size_t bytes = n * sizeof(uint64_t);
+//         std::size_t pages = (bytes + PAGE_SIZE - 1) / PAGE_SIZE; // round up to the nearest page
+//         void* ptr = mmap(NULL, pages * PAGE_SIZE, PROT_READ | PROT_WRITE, MAP_PRIVATE | MAP_ANONYMOUS, -1, 0);
+//         if (ptr == MAP_FAILED) {
+//             throw std::bad_alloc();
+//         }
+//         return static_cast<uint64_t*>(ptr);
+//     }
+//
+//     void deallocate(uint64_t* p, std::size_t n) {
+//         std::size_t bytes = n * sizeof(uint64_t);
+//         std::size_t pages = (bytes + PAGE_SIZE - 1) / PAGE_SIZE; // round up to the nearest page
+//         munmap(static_cast<void*>(p), pages * PAGE_SIZE);
+//     }
+//
+// private:
+//     static const std::size_t PAGE_SIZE = 4096;
+// };
 
 typedef std::vector<uint64_t> datapage_t;
 
