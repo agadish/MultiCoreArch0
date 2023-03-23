@@ -1,9 +1,5 @@
 CXX=/usr/bin/g++
-CXXFLAGS_BASIC=-O3 -Wall -pedantic -std=c++17 -Werror
-CXXFLAGS_CILK=-fcilkplus
-CXXFLAGS=$(CXXFLAGS_BASIC) $(CXXFLAGS_CILK)
-LIBRARIES=cilkrts
-LDFLAGS=$(addprefix $(LIBRARIES),-l)
+CXXFLAGS=-O3 -Wall -pedantic -std=c++11 -Werror -fopenmp
 SOURCES=$(wildcard *.cpp)
 OBJECTS=$(SOURCES:.cpp=.o)
 EXEC=parsort
@@ -12,8 +8,8 @@ EXEC=parsort
 
 all: $(EXEC)
 
-$(EXEC): $(OBJECTS)
-	$(CXX) $(CXXFLAGS) $^ -o $@
+$(EXEC): $(SOURCES)
+	$(CXX) $(CXXFLAGS) $^ -o $@ $(LDFLAGS)
 
 %.o: %.cpp
 	$(CXX) -c $(CXXFLAGS) $^ -o $@
