@@ -2,6 +2,24 @@
  * @file parsort.cpp
  * @author Assaf Gadish
  * @purpose Multi-Core Architecture and Systems - Home Assignment 0
+ *
+ * @documentation The Parsort class works by reading uint64_t numbers from the text file, and
+ *                dividing them to pre-allocated vectors of 512 members, in order for each
+ *                vector to consume 4096 bytes and be placed on one page.
+ *                All those pages are inserted to a global jobs list as SortJob which will
+ *                sort each 512-members vector.
+ *
+ *                Workers:
+ *                The total amount of data is then divided by the number of workers, and each
+ *                worker repeatedly tries to take a greater/equal amount of data, and performs that
+ *                job.
+ *                After the job is done, the worker creates new jobs list as MergeJob and
+ *                the worker will push it to the global list, before trying to pull new work for
+ *                itself.
+ *
+ * @improvements A more sophisticated algorithm for the amount of work being taken can be used,
+ *               since the push/pull game doesn't really help with the same amount
+ *
  */
 /*   I N C L U D E S   */
 #include <iostream>
@@ -26,7 +44,6 @@ enum parsort_arg_e {
 };
 
 enum result_e {
-    E__UNKNOWN = -1,
     E__SUCCESS = 0,
     E__INVALID_ARGS,
     E__INVALID_NUMBER_OF_CORES,
@@ -117,7 +134,6 @@ Parsort::get_jobs()
     size_t desired_work = (mTotalNumbers + mNumberOfCores - 1) / mNumberOfCores;
     size_t copy_length = 0;
 
-    // cout << "hello 0" << endl;
     for (auto job : mJobs) {
         ++copy_length;
         total_work += job->get_size();
@@ -125,20 +141,12 @@ Parsort::get_jobs()
             break;
         }
     }
-    // cout << "hello 1" << endl;
-    my_jobs.insert(my_jobs.end(), std::make_move_iterator(mJobs.begin()), std::make_move_iterator(mJobs.begin() + copy_length));
-    // cout << "hello 2" << endl;
+    my_jobs.insert(my_jobs.end(),
+                   std::make_move_iterator(mJobs.begin()),
+                   std::make_move_iterator(mJobs.begin() + copy_length));
     mJobs.erase(mJobs.begin(), mJobs.begin() + copy_length);
-    // cout << "hello 3" << endl;
 
     return my_jobs;
-    // for (Job a : all_jobs) {
-    //     total_work += a.get_size();
-    //     if (total_work > desired_work) {
-    //         break;
-    //     }
-    //
-    // }
 }
 
 void
@@ -148,56 +156,30 @@ Parsort::sort__worker(size_t id)
     #pragma omp critical
     {
         jobs = get_jobs();
-        // cout << "thread " << id << ": got " << jobs.size() << " jobs, remaining" << mJobs.size() << endl;
     }
 
     while (0 != jobs.size()) {
         vector<shared_ptr<Job>> new_jobs;
         datapage_t last_result;
         for (auto job : jobs) {
-            // cout << "thread " << id << ": doing work" << endl;
             auto job_result = job->do_work();
-            // cout << "thread " << id << ": did it, job_result=" << job_result.size() << " last_result=" << last_result.size() << endl;
             if (0 != last_result.size()) {
-                // cout << "thread " << id << ": did it, got size " << job_result.size() << endl;
                 shared_ptr<Job> new_job(new MergerJob(last_result, job_result));
                 new_jobs.push_back(new_job);
                 last_result.clear();
             } else {
-                // cout << "thread " << id << ": copying job_result" << endl;
                 last_result = job_result;
             }
         }
 
-        // cout << "thread " << id << ": after loop" << endl;
         #pragma omp critical
         {
-            // cout << "publishing result" << endl;
             publish_results(new_jobs, last_result);
             jobs = get_jobs();
-            // cout << "thread " << id << ": got " << jobs.size() << " jobs, remaining" << mJobs.size() << endl;
         }
 
     }
-    
-    // // 1. Sort each chunk of the worker using quicksort
-    // for (size_t i = id ; i < mNumberOfCores.size() ; i += mNumberOfCores) {
-    //     std::sort(mJobs.get(i));
-    // }
-    //
-    // // 2. Repeatedly merge every chunk
-    //
-    // const size_t msb_index = get_msb_index(id);
-    // for (size_t job_index = 0 ; job_index < msb_index ; ++job_index) {
-    //     const size_t diff = mNumberOfCores // * job_index?
-    //     for (size_t i = id ; i < mNumberOfCores.size() ; i += diff) {
-    //         // Perform QuickSort
-    //         std::sort(mJobs.get(i));
-    //     }
-    // }
 }
-
-
 
 Parsort::Parsort(int numberOfCores) :
     mNumberOfCores(numberOfCores),
@@ -207,15 +189,9 @@ Parsort::Parsort(int numberOfCores) :
 {
     mPageSize = sysconf(_SC_PAGESIZE);
     mVarsPerPage = mPageSize / sizeof(uint64_t);
-    // omp_init_lock(&mDatapagesLock);
-    // omp_init_lock(&mJobsLock);
 }
 
-Parsort::~Parsort()
-{
-    // omp_destroy_lock(&mDatapagesLock);
-    // omp_destroy_lock(&mJobsLock);
-}
+Parsort::~Parsort() { }
 
 bool
 Parsort::read_input_file(const char *inputFilePath)
@@ -250,7 +226,6 @@ Parsort::read_input_file(const char *inputFilePath)
         }
     }
 
-    // cout << "Finished read_input_file, total nums=" << mTotalNumbers << ", total jobs=" << mJobs.size() << endl;
     return true;
 }
 
